@@ -47,16 +47,19 @@
         </div>
         
         <div class="data-row">
+            <input type="text" id="cpf" readonly placeholder="CPF" onclick="copyToClipboard('cpf')" title="Clique para copiar">
+        </div>
+        <div class="data-row">
             <input type="text" id="fullName" readonly placeholder="Nome Completo" onclick="copyToClipboard('fullName')" title="Clique para copiar">
         </div>
         <div class="data-row">
-            <input type="text" id="cpf" readonly placeholder="CPF" onclick="copyToClipboard('cpf')" title="Clique para copiar">
+            <input type="text" id="birthdate" readonly placeholder="Data Nascimento" onclick="copyToClipboard('birthdate')" title="Clique para copiar">
         </div>
         <div class="data-row">
             <input type="text" id="email" readonly placeholder="Email" onclick="copyToClipboard('email')" title="Clique para copiar">
         </div>
         <div class="data-row">
-            <input type="text" id="birthdate" readonly placeholder="Data Nascimento" onclick="copyToClipboard('birthdate')" title="Clique para copiar">
+            <input type="text" id="phone" readonly placeholder="Número de Celular" onclick="copyToClipboard('phone')" title="Clique para copiar">
         </div>
         
         <div class="card-section">
@@ -169,6 +172,19 @@
             return cpf;
         }
 
+        function generatePhone() {
+            const ddd = Math.floor(Math.random() * 89) + 11; // DDD entre 11 e 99
+            let phone = ddd.toString();
+            
+            // Gera número de 9 dígitos começando com 9
+            phone += '9';
+            for (let i = 0; i < 8; i++) {
+                phone += Math.floor(Math.random() * 10);
+            }
+            
+            return phone;
+        }
+
         function generateBirthdate() {
             const date = new Date(1950 + Math.floor(Math.random() * 53), Math.floor(Math.random() * 12), 1 + Math.floor(Math.random() * 28));
             const day = ('0' + date.getDate()).slice(-2);
@@ -209,10 +225,11 @@
             const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
             
             const newData = {
-                fullName: firstName + ' ' + lastName,
                 cpf: generateCPF(),
-                email: generateEmail(true),
+                fullName: firstName + ' ' + lastName,
                 birthdate: generateBirthdate(),
+                email: generateEmail(true),
+                phone: generatePhone(),
                 cardNumber: generateCardNumber()
             };
             
@@ -220,6 +237,7 @@
             localStorage.setItem('currentData', JSON.stringify(newData));
             
             updateFields(newData);
+            showNotification('✓ Dados gerados!');
         }
 
         function generateCardOnly() {
@@ -241,10 +259,11 @@
             const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
             
             const newData = {
-                fullName: firstName + ' ' + lastName,
                 cpf: generateCPF(),
-                email: generateEmail(false),
+                fullName: firstName + ' ' + lastName,
                 birthdate: generateBirthdate(),
+                email: generateEmail(false),
+                phone: generatePhone(),
                 cardNumber: generateCardNumber()
             };
             
@@ -263,10 +282,11 @@
         }
 
         function updateFields(data) {
-            document.getElementById('fullName').value = data.fullName || '';
             document.getElementById('cpf').value = data.cpf || '';
-            document.getElementById('email').value = data.email || '';
+            document.getElementById('fullName').value = data.fullName || '';
             document.getElementById('birthdate').value = data.birthdate || '';
+            document.getElementById('email').value = data.email || '';
+            document.getElementById('phone').value = data.phone || '';
             document.getElementById('cardNumber').value = data.cardNumber || '';
         }
 
@@ -284,10 +304,11 @@
         }
 
         function clearData() {
-            document.getElementById('fullName').value = '';
             document.getElementById('cpf').value = '';
-            document.getElementById('email').value = '';
+            document.getElementById('fullName').value = '';
             document.getElementById('birthdate').value = '';
+            document.getElementById('email').value = '';
+            document.getElementById('phone').value = '';
             document.getElementById('cardNumber').value = '';
             currentData = null;
             localStorage.removeItem('currentData');
