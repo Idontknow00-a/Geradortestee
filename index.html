@@ -69,16 +69,6 @@
             color: #666;
             margin-top: 5px;
         }
-        .filtered-emails {
-            background: #e8f5e9;
-            padding: 10px;
-            border-radius: 5px;
-            margin-top: 10px;
-            display: none;
-        }
-        .filtered-emails.show {
-            display: block;
-        }
     </style>
 </head>
 <body>
@@ -138,10 +128,6 @@
                 <textarea id="emailList" rows="5" placeholder="Cole sua lista aqui (nomes, emails, coisas aleatórias...)" style="display: none;"></textarea>
                 <button onclick="saveEmailList()" style="margin-top: 10px; display: none;" id="saveEmailListBtn">Salvar Lista</button>
                 <div class="email-list-status" id="emailListStatus"></div>
-                <div class="filtered-emails" id="filteredEmails">
-                    <strong>Emails filtrados:</strong>
-                    <div id="filteredEmailsList"></div>
-                </div>
             </div>
             
             <button onclick="resetAlias()" style="width: 100%; margin-top: 10px; background: #666;">Resetar Alias</button>
@@ -202,6 +188,7 @@
         let currentGender = localStorage.getItem('currentGender') || 'male';
         let currentData = JSON.parse(localStorage.getItem('currentData')) || null;
         let emailList = JSON.parse(localStorage.getItem('emailList')) || [];
+        let usedEmails = JSON.parse(localStorage.getItem('usedEmails')) || [];
         let useEmailList = localStorage.getItem('useEmailList') === 'true';
 
         function showNotification(message) {
@@ -260,10 +247,8 @@
         }
 
         function filterEmails(text) {
-            // Divide por linhas, vírgulas, espaços, etc.
             const items = text.split(/[\n,;\s]+/);
             
-            // Filtra apenas emails válidos
             const emails = items.filter(item => {
                 const trimmed = item.trim();
                 return trimmed.includes('@') && trimmed.includes('.') && trimmed.length > 5;
@@ -272,14 +257,43 @@
             return emails;
         }
 
+        function getNextEmail() {
+            // Se ainda há emails disponíveis na lista
+            const availableEmails = emailList.filter(email => !usedEmails.includes(email));
+            
+            if (availableEmails.length > 0) {
+                // Pega o primeiro email disponível
+                const nextEmail = availableEmails[0];
+                usedEmails.push(nextEmail);
+                localStorage.setItem('usedEmails', JSON.stringify(usedEmails));
+                return nextEmail;
+            } else {
+                // Se todos foram usados, reinicia a lista de usados
+                usedEmails = [];
+                localStorage.setItem('usedEmails', JSON.stringify(usedEmails));
+                showNotification('🔄 Lista reiniciada!');
+                
+                if (emailList.length > 0) {
+                    const nextEmail = emailList[0];
+                    usedEmails.push(nextEmail);
+                    localStorage.setItem('usedEmails', JSON.stringify(usedEmails));
+                    return nextEmail;
+                }
+                
+                return null;
+            }
+        }
+
         function generateEmail(isNewGeneration = true) {
-            // Se usar lista de emails filtrados
+            // Se usar lista de emails
             if (useEmailList && emailList.length > 0) {
-                const randomEmail = emailList[Math.floor(Math.random() * emailList.length)];
-                return randomEmail;
+                const nextEmail = getNextEmail();
+                if (nextEmail) {
+                    return nextEmail;
+                }
             }
             
-            // Se não usar lista, usa o método tradicional
+            // Se não usar lista ou lista vazia, usa o método tradicional
             let alias = parseInt(localStorage.getItem('aliasNumber')) || 1;
             const base = localStorage.getItem('baseEmail') || "teste@gmail.com";
             
@@ -427,7 +441,6 @@
             const textarea = document.getElementById('emailList');
             const saveBtn = document.getElementById('saveEmailListBtn');
             const status = document.getElementById('emailListStatus');
-            const filteredDiv = document.getElementById('filteredEmails');
             
             useEmailList = toggle.checked;
             localStorage.setItem('useEmailList', useEmailList);
@@ -436,13 +449,11 @@
                 textarea.style.display = 'block';
                 saveBtn.style.display = 'block';
                 textarea.value = emailList.join('\n');
-                status.textContent = `Lista ativa (${emailList.length} emails filtrados)`;
-                showFilteredEmails();
+                status.textContent = `Lista ativa (${emailList.length} emails disponíveis)`;
             } else {
                 textarea.style.display = 'none';
                 saveBtn.style.display = 'none';
                 status.textContent = '';
-                filteredDiv.classList.remove('show');
             }
         }
 
@@ -461,23 +472,14 @@
             emailList = emails;
             localStorage.setItem('emailList', JSON.stringify(emailList));
             
+            // Reseta emails usados quando nova lista é salva
+            usedEmails = [];
+            localStorage.setItem('usedEmails', JSON.stringify(usedEmails));
+            
             const status = document.getElementById('emailListStatus');
-            status.textContent = `Lista ativa (${emailList.length} emails filtrados)`;
+            status.textContent = `Lista ativa (${emailList.length} emails disponíveis)`;
             
-            showFilteredEmails();
             showNotification(`✓ ${emails.length} emails filtrados!`);
-        }
-
-        function showFilteredEmails() {
-            const filteredDiv = document.getElementById('filteredEmails');
-            const filteredList = document.getElementById('filteredEmailsList');
-            
-            if (emailList.length > 0) {
-                filteredList.innerHTML = emailList.map(email => `• ${email}`).join('<br>');
-                filteredDiv.classList.add('show');
-            } else {
-                filteredDiv.classList.remove('show');
-            }
         }
 
         // Inicializar
