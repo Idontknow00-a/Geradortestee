@@ -69,10 +69,22 @@
             color: #666;
             margin-top: 5px;
         }
+        .filtered-emails {
+            background: #e8f5e9;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            display: none;
+        }
+        .filtered-emails.show {
+            display: block;
+        }
     </style>
 </head>
 <body>
     <div class="container">
+        <h1>Gerador de Dados Pessoais</h1>
+        
         <div class="gender-buttons">
             <button onclick="setGender('male')" id="maleBtn">Masculino</button>
             <button onclick="setGender('female')" id="femaleBtn">Feminino</button>
@@ -100,6 +112,7 @@
         </div>
         
         <div class="card-section">
+            <h3>Cartão Elo Fictício</h3>
             <div class="data-row">
                 <input type="text" id="cardNumber" readonly placeholder="Número do Cartão" onclick="copyToClipboard('cardNumber')" title="Clique para copiar">
             </div>
@@ -125,9 +138,13 @@
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
-                <textarea id="emailList" rows="4" placeholder="Cole sua lista de emails aqui (um por linha)" style="display: none;"></textarea>
+                <textarea id="emailList" rows="5" placeholder="Cole sua lista aqui (nomes, emails, coisas aleatórias...)" style="display: none;"></textarea>
                 <button onclick="saveEmailList()" style="margin-top: 10px; display: none;" id="saveEmailListBtn">Salvar Lista</button>
                 <div class="email-list-status" id="emailListStatus"></div>
+                <div class="filtered-emails" id="filteredEmails">
+                    <strong>Emails filtrados:</strong>
+                    <div id="filteredEmailsList"></div>
+                </div>
             </div>
             
             <button onclick="resetAlias()" style="width: 100%; margin-top: 10px; background: #666;">Resetar Alias</button>
@@ -242,11 +259,24 @@
             const day = ('0' + date.getDate()).slice(-2);
             const month = ('0' + (date.getMonth() + 1)).slice(-2);
             const year = date.getFullYear();
-            return day + month + year;
+            return day + '/' + month + '/' + year;
+        }
+
+        function filterEmails(text) {
+            // Divide por linhas, vírgulas, espaços, etc.
+            const items = text.split(/[\n,;\s]+/);
+            
+            // Filtra apenas emails válidos
+            const emails = items.filter(item => {
+                const trimmed = item.trim();
+                return trimmed.includes('@') && trimmed.includes('.') && trimmed.length > 5;
+            });
+            
+            return emails;
         }
 
         function generateEmail(isNewGeneration = true) {
-            // Se usar lista de emails
+            // Se usar lista de emails filtrados
             if (useEmailList && emailList.length > 0) {
                 const randomEmail = emailList[Math.floor(Math.random() * emailList.length)];
                 return randomEmail;
@@ -400,6 +430,7 @@
             const textarea = document.getElementById('emailList');
             const saveBtn = document.getElementById('saveEmailListBtn');
             const status = document.getElementById('emailListStatus');
+            const filteredDiv = document.getElementById('filteredEmails');
             
             useEmailList = toggle.checked;
             localStorage.setItem('useEmailList', useEmailList);
@@ -408,29 +439,48 @@
                 textarea.style.display = 'block';
                 saveBtn.style.display = 'block';
                 textarea.value = emailList.join('\n');
-                status.textContent = `Lista ativa (${emailList.length} emails)`;
+                status.textContent = `Lista ativa (${emailList.length} emails filtrados)`;
+                showFilteredEmails();
             } else {
                 textarea.style.display = 'none';
                 saveBtn.style.display = 'none';
                 status.textContent = '';
+                filteredDiv.classList.remove('show');
             }
         }
 
         function saveEmailList() {
             const textarea = document.getElementById('emailList');
-            const emails = textarea.value.split('\n').filter(email => email.trim() !== '');
+            const rawText = textarea.value;
+            
+            // Filtra apenas emails do texto
+            const emails = filterEmails(rawText);
             
             if (emails.length === 0) {
-                showNotification('Lista vazia!');
+                showNotification('Nenhum email válido encontrado!');
                 return;
             }
             
-            emailList = emails.map(email => email.trim());
+            emailList = emails;
             localStorage.setItem('emailList', JSON.stringify(emailList));
             
             const status = document.getElementById('emailListStatus');
-            status.textContent = `Lista ativa (${emailList.length} emails)`;
-            showNotification('✓ Lista salva!');
+            status.textContent = `Lista ativa (${emailList.length} emails filtrados)`;
+            
+            showFilteredEmails();
+            showNotification(`✓ ${emails.length} emails filtrados!`);
+        }
+
+        function showFilteredEmails() {
+            const filteredDiv = document.getElementById('filteredEmails');
+            const filteredList = document.getElementById('filteredEmailsList');
+            
+            if (emailList.length > 0) {
+                filteredList.innerHTML = emailList.map(email => `• ${email}`).join('<br>');
+                filteredDiv.classList.add('show');
+            } else {
+                filteredDiv.classList.remove('show');
+            }
         }
 
         // Inicializar
