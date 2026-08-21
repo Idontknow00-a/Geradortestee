@@ -69,10 +69,16 @@
             color: #666;
             margin-top: 5px;
         }
+        .email-list-status.empty {
+            color: #f44336;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
     <div class="container">
+        <h1>Gerador de Dados Pessoais</h1>
+        
         <div class="gender-buttons">
             <button onclick="setGender('male')" id="maleBtn">Masculino</button>
             <button onclick="setGender('female')" id="femaleBtn">Feminino</button>
@@ -100,6 +106,7 @@
         </div>
         
         <div class="card-section">
+            <h3>Cartão Elo Fictício</h3>
             <div class="data-row">
                 <input type="text" id="cardNumber" readonly placeholder="Número do Cartão" onclick="copyToClipboard('cardNumber')" title="Clique para copiar">
             </div>
@@ -188,7 +195,6 @@
         let currentGender = localStorage.getItem('currentGender') || 'male';
         let currentData = JSON.parse(localStorage.getItem('currentData')) || null;
         let emailList = JSON.parse(localStorage.getItem('emailList')) || [];
-        let usedEmails = JSON.parse(localStorage.getItem('usedEmails')) || [];
         let useEmailList = localStorage.getItem('useEmailList') === 'true';
 
         function showNotification(message) {
@@ -243,7 +249,7 @@
             const day = ('0' + date.getDate()).slice(-2);
             const month = ('0' + (date.getMonth() + 1)).slice(-2);
             const year = date.getFullYear();
-            return day + month + year;
+            return day + '/' + month + '/' + year;
         }
 
         function filterEmails(text) {
@@ -257,40 +263,18 @@
             return emails;
         }
 
-        function getNextEmail() {
-            // Se ainda há emails disponíveis na lista
-            const availableEmails = emailList.filter(email => !usedEmails.includes(email));
-            
-            if (availableEmails.length > 0) {
-                // Pega o primeiro email disponível
-                const nextEmail = availableEmails[0];
-                usedEmails.push(nextEmail);
-                localStorage.setItem('usedEmails', JSON.stringify(usedEmails));
-                return nextEmail;
-            } else {
-                // Se todos foram usados, reinicia a lista de usados
-                usedEmails = [];
-                localStorage.setItem('usedEmails', JSON.stringify(usedEmails));
-                showNotification('🔄 Lista reiniciada!');
-                
-                if (emailList.length > 0) {
-                    const nextEmail = emailList[0];
-                    usedEmails.push(nextEmail);
-                    localStorage.setItem('usedEmails', JSON.stringify(usedEmails));
-                    return nextEmail;
-                }
-                
-                return null;
-            }
-        }
-
         function generateEmail(isNewGeneration = true) {
             // Se usar lista de emails
             if (useEmailList && emailList.length > 0) {
-                const nextEmail = getNextEmail();
-                if (nextEmail) {
-                    return nextEmail;
-                }
+                // Pega o primeiro email da lista e remove
+                const nextEmail = emailList.shift();
+                localStorage.setItem('emailList', JSON.stringify(emailList));
+                updateEmailListStatus();
+                return nextEmail;
+            } else if (useEmailList && emailList.length === 0) {
+                // Lista acabou
+                showNotification('⚠️ Lista de emails acabou!');
+                return '';
             }
             
             // Se não usar lista ou lista vazia, usa o método tradicional
@@ -436,11 +420,23 @@
         }
 
         // Funções para lista de emails
+        function updateEmailListStatus() {
+            const status = document.getElementById('emailListStatus');
+            if (useEmailList) {
+                if (emailList.length > 0) {
+                    status.textContent = `Lista ativa (${emailList.length} emails restantes)`;
+                    status.className = 'email-list-status';
+                } else {
+                    status.textContent = 'Lista acabou!';
+                    status.className = 'email-list-status empty';
+                }
+            }
+        }
+
         function toggleEmailList() {
             const toggle = document.getElementById('emailListToggle');
             const textarea = document.getElementById('emailList');
             const saveBtn = document.getElementById('saveEmailListBtn');
-            const status = document.getElementById('emailListStatus');
             
             useEmailList = toggle.checked;
             localStorage.setItem('useEmailList', useEmailList);
@@ -449,11 +445,12 @@
                 textarea.style.display = 'block';
                 saveBtn.style.display = 'block';
                 textarea.value = emailList.join('\n');
-                status.textContent = `Lista ativa (${emailList.length} emails disponíveis)`;
+                updateEmailListStatus();
             } else {
                 textarea.style.display = 'none';
                 saveBtn.style.display = 'none';
-                status.textContent = '';
+                document.getElementById('emailListStatus').textContent = '';
+                document.getElementById('emailListStatus').className = 'email-list-status';
             }
         }
 
@@ -472,12 +469,7 @@
             emailList = emails;
             localStorage.setItem('emailList', JSON.stringify(emailList));
             
-            // Reseta emails usados quando nova lista é salva
-            usedEmails = [];
-            localStorage.setItem('usedEmails', JSON.stringify(usedEmails));
-            
-            const status = document.getElementById('emailListStatus');
-            status.textContent = `Lista ativa (${emailList.length} emails disponíveis)`;
+            updateEmailListStatus();
             
             showNotification(`✓ ${emails.length} emails filtrados!`);
         }
