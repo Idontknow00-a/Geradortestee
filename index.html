@@ -11,6 +11,7 @@
         h3 { color: #2a5298; margin-bottom: 10px; }
         .data-row { margin: 10px 0; display: flex; gap: 10px; }
         input { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; }
+        textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; resize: vertical; }
         button { padding: 8px 15px; background: #2a5298; color: white; border: none; border-radius: 4px; cursor: pointer; }
         button:hover { opacity: 0.9; }
         .copy-btn { background: #2196F3; }
@@ -32,6 +33,42 @@
         .gender-buttons button { flex: 1; }
         .action-buttons { display: flex; gap: 10px; margin: 15px 0; }
         .action-buttons button { flex: 1; }
+        .toggle-container { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
+        .toggle-switch { position: relative; width: 50px; height: 24px; cursor: pointer; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        .toggle-switch input:checked + .toggle-slider {
+            background-color: #4CAF50;
+        }
+        .toggle-switch input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+        }
+        .email-list-status {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
@@ -79,6 +116,20 @@
                 <input type="email" id="baseEmail" placeholder="seuemail@gmail.com">
                 <button onclick="setBaseEmail()">Definir</button>
             </div>
+            
+            <div style="margin: 15px 0; padding: 10px; background: #fff; border-radius: 5px;">
+                <div class="toggle-container">
+                    <span>Usar Lista de Emails:</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="emailListToggle" onchange="toggleEmailList()">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <textarea id="emailList" rows="4" placeholder="Cole sua lista de emails aqui (um por linha)" style="display: none;"></textarea>
+                <button onclick="saveEmailList()" style="margin-top: 10px; display: none;" id="saveEmailListBtn">Salvar Lista</button>
+                <div class="email-list-status" id="emailListStatus"></div>
+            </div>
+            
             <button onclick="resetAlias()" style="width: 100%; margin-top: 10px; background: #666;">Resetar Alias</button>
         </div>
     </div>
@@ -136,6 +187,8 @@
         
         let currentGender = localStorage.getItem('currentGender') || 'male';
         let currentData = JSON.parse(localStorage.getItem('currentData')) || null;
+        let emailList = JSON.parse(localStorage.getItem('emailList')) || [];
+        let useEmailList = localStorage.getItem('useEmailList') === 'true';
 
         function showNotification(message) {
             const notification = document.getElementById('notification');
@@ -173,10 +226,9 @@
         }
 
         function generatePhone() {
-            const ddd = Math.floor(Math.random() * 89) + 11; // DDD entre 11 e 99
+            const ddd = Math.floor(Math.random() * 89) + 11;
             let phone = ddd.toString();
             
-            // Gera número de 9 dígitos começando com 9
             phone += '9';
             for (let i = 0; i < 8; i++) {
                 phone += Math.floor(Math.random() * 10);
@@ -194,6 +246,13 @@
         }
 
         function generateEmail(isNewGeneration = true) {
+            // Se usar lista de emails
+            if (useEmailList && emailList.length > 0) {
+                const randomEmail = emailList[Math.floor(Math.random() * emailList.length)];
+                return randomEmail;
+            }
+            
+            // Se não usar lista, usa o método tradicional
             let alias = parseInt(localStorage.getItem('aliasNumber')) || 1;
             const base = localStorage.getItem('baseEmail') || "teste@gmail.com";
             
@@ -210,12 +269,10 @@
             const prefix = '6505';
             let cardNumber = prefix;
             
-            // Gera 12 dígitos aleatórios
             for (let i = 0; i < 12; i++) {
                 cardNumber += Math.floor(Math.random() * 10);
             }
             
-            // Formata o número do cartão
             return cardNumber.replace(/(\d{4})(?=\d)/g, '$1 ');
         }
 
@@ -337,6 +394,45 @@
             showNotification('Alias resetado');
         }
 
+        // Funções para lista de emails
+        function toggleEmailList() {
+            const toggle = document.getElementById('emailListToggle');
+            const textarea = document.getElementById('emailList');
+            const saveBtn = document.getElementById('saveEmailListBtn');
+            const status = document.getElementById('emailListStatus');
+            
+            useEmailList = toggle.checked;
+            localStorage.setItem('useEmailList', useEmailList);
+            
+            if (useEmailList) {
+                textarea.style.display = 'block';
+                saveBtn.style.display = 'block';
+                textarea.value = emailList.join('\n');
+                status.textContent = `Lista ativa (${emailList.length} emails)`;
+            } else {
+                textarea.style.display = 'none';
+                saveBtn.style.display = 'none';
+                status.textContent = '';
+            }
+        }
+
+        function saveEmailList() {
+            const textarea = document.getElementById('emailList');
+            const emails = textarea.value.split('\n').filter(email => email.trim() !== '');
+            
+            if (emails.length === 0) {
+                showNotification('Lista vazia!');
+                return;
+            }
+            
+            emailList = emails.map(email => email.trim());
+            localStorage.setItem('emailList', JSON.stringify(emailList));
+            
+            const status = document.getElementById('emailListStatus');
+            status.textContent = `Lista ativa (${emailList.length} emails)`;
+            showNotification('✓ Lista salva!');
+        }
+
         // Inicializar
         function init() {
             setGender(currentGender);
@@ -350,6 +446,14 @@
             }
             if (savedBaseEmail) {
                 document.getElementById('baseEmail').value = savedBaseEmail;
+            }
+            
+            // Inicializar lista de emails
+            const toggle = document.getElementById('emailListToggle');
+            toggle.checked = useEmailList;
+            
+            if (useEmailList) {
+                toggleEmailList();
             }
         }
 
